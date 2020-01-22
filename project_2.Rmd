@@ -1,0 +1,275 @@
+---
+title: "Project 2--Modeling & Visualization"
+author: "Elise Haylett, Joel Smith, and Connor Nilsson"
+date: '`r format(Sys.time(), "%A, %B %d, %Y @ %I:%M %p")`'
+output: 
+  html_document: 
+    theme: yeti
+    highlight: textmate
+    code_folding: hide
+---
+
+```{r globalopts, include = FALSE}
+library(knitr)
+opts_chunk$set(comment = "", message = FALSE, warning = FALSE)
+```
+
+## {.tabset}
+
+### **Packages/Data**
+
+Load all packages and datasets here, except for `ggtern` in Problem 3. Use `glimpse` to visualize each dataset's structure.
+
+Packages Used
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(broom)
+library(tidyverse)
+library(moderndive)
+library(RColorBrewer)
+library(ggrepel)
+```
+
+Monopoly Game Data
+
+```{r monopolydata}
+monopoly <- read_csv(file = url("https://raw.githubusercontent.com/STAT-JET-ASU/Datasets/master/Instructor/monopolygame.csv"))
+
+glimpse(monopoly)
+```
+
+Spruce Experiment Data
+
+```{r sprucedata}
+Spruce <- read_csv(file = url("https://raw.githubusercontent.com/STAT-JET-ASU/Datasets/master/Chihara/Spruce.csv"))
+
+glimpse(Spruce)
+```
+
+Fast Food Data
+
+```{r fastfooddata}
+fastfood2017 <- read_csv(file = url("https://raw.githubusercontent.com/STAT-JET-ASU/Datasets/master/Instructor/fastfood2017.csv"))
+cookout <- read_csv(file = url("https://raw.githubusercontent.com/STAT-JET-ASU/Datasets/master/Instructor/cookoutburgers.csv"))
+
+glimpse(fastfood2017)
+glimpse(cookout)
+```
+
+
+### **Problem 1**
+
+First known as *The Landlord's Game* by its original developers, the game we now know as *Monopoly* was commercially released by Parker Brothers in 1935. There are now over 1000 variations of this classic game in the US and abroad. Read the description for the [`monopoly`](https://stat-jet-asu.github.io/Datasets/InstructorDescriptions/monopoly.html) dataset and use the data to perform the following analysis.
+
+A) Create a scatterplot with fitted lines to show the relationship between the number of spaces from Go (x) and the purchase price of the property (y), with a separate line for each property type. Add an informative title and better axis labels than the default variable names, including units of measure. Apply `theme_classic()`. Remove the legend title and change the font of the title  and axis labels using `theme()`. Optionally, you may change the color, size, or style of the points and lines.
+
+```{r pricesplot}
+ggplot(monopoly, aes(x = spaces, y = cost, color = type)) + 
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_classic() + 
+  theme(legend.title = element_blank(), 
+          plot.title = element_text(family = "Times new roman"), 
+          axis.title = element_text(family = "Times new roman")) +
+  labs(title = "Relationship between Number of Spaces and Property Cost",
+       x = "Number of Spaces from Go",
+       y = "Property Cost ($)")
+```
+
+B) Create a horizontal barplot showing the price of each street property (no railroads or utilities). Arrange the properties in the order they appear on the game board with the first property on top using `reorder()`. Color the bars according to the color of the property and make them half the default width. Add an informative title and axis labels. Themes or other formatting changes are optional.
+
+```{r streetsplot}
+monopoly %>% filter(type == "street") %>%
+  ggplot(aes(x = reorder(name, -spaces), y = cost, fill = color)) + 
+  geom_bar(stat = "identity", width = .45) + 
+  coord_flip() + 
+  theme(legend.position = "none") +
+  labs(title = "Relationship between Street Property and Property Cost",
+       x = "Property Name",
+       y = "Property Cost ($)") +
+  scale_fill_manual(values = c("blue", "dark green", "light blue", "orange", "purple", "red", "pink", "yellow"))
+```
+
+
+### **Problem 2**
+
+Black spruce is a slow-growing coniferous tree found across the northern part of North America. Researchers conducted a study to see what factors might impact the growth of black spruce seedlings. The independent variables were whether or not seedlings were fertilized, and whether or not competition was removed (in this case, by weeding out other plants). Seventy-two seedlings were planted in four plots created from combining the two levels of the two independent variables and left to grow for five years. The data can be found in [spruce.csv](https://raw.githubusercontent.com/STAT-JET-ASU/Datasets/master/Chihara/Spruce.csv). The variables are:
+
+* Tree: tree number
+* Competition: C = competition, CR = competition removed
+* Fertilizer: F = fertilized, NF = not fertilized
+* Height0: height (cm) of plant when it was planted
+* Height5: height (cm) of plant at the end of 5 years
+* Diameter0: diameter (cm) of plant when it was planted
+* Diameter5: diameter (cm) of plant at the end of 5 years
+* Ht.change: change in height (cm)
+* Di.change: change in di
+Create a 2 x 2 faceted grid of scatterplots to show seedling heights after five years (y) versus their initial heights (x). Each plot should represent one of the four experimental conditions. Change the labels on the facets so that they read as words (e.g., “competition”) rather than the abbreviations for the two types of treatments. Add an annotated dashed line to the plot that represents the overall mean height after 5 years. Use theme_dark() and change the colors of the points and the lines to be more legible on the dark background. Facets should all use the same colors. Add an informative title and better axis labels, including units of measure.
+```{r spruceplot}
+spruceplot <- ggplot(Spruce, aes(x = Height0, y = Height5)) +
+  geom_point(color = "gold") +
+  geom_hline(aes(
+              yintercept = mean(Spruce$Height5)),
+              linetype = "dashed",
+              color = "red") +
+  theme_dark() +
+  labs(title = "Seedling Heights after 5 years",
+       x = "Initial Height (cm)",
+       y = "Height after 5 years (cm)") +
+  annotate("text", x = 11, y = 42, 
+           label = "avg. ht after 5 yrs", 
+           size = 4, 
+           color = "white")
+
+Spruce_condC <- c(
+  C = "competition",
+  NC = "no competition")
+Spruce_condF <- c(
+  F = "fertilized",
+  NF = "not fertilized")
+
+spruceplot + facet_grid(Fertilizer ~ Competition, labeller = labeller(
+    Competition = Spruce_condC,
+    Fertilizer = Spruce_condF))
+```
+
+B) Fit a parallel slopes model to show the height of seedlings after five years as a function of the starting height and fertilizer category only. Display the table of coefficients and table of summaries using `moderndive` functions to produce Markdown-formatted output. Create a plot to visualize your model. Add a labeled vertical line segment between the two lines to show the coefficient of the fertilizer term (i.e., the effect of fertilizer), as well as a title and better axis labels. Use a color scheme that compliments your faceted scatterplots.
+
+```{r parallelslopesmodel}
+#Height5 = 36.039 + 1.154(Height0) - 14.702(NoFertilizer)
+sprucelm <- lm(Height5 ~ Height0 + Fertilizer, data = Spruce)
+
+sprucelm$coefficients
+get_regression_summaries(sprucelm, print = TRUE)
+get_regression_table(sprucelm, print = TRUE)
+```
+
+```{r parallelslopesplot}
+#GEOM_SEGMENT - line segment
+ggplot(Spruce, aes(x = Height0, y = Height5, color = Fertilizer)) +
+  geom_point() + 
+  geom_smooth(method = "lm", se = FALSE) + 
+  geom_segment(aes(x = 12.5,
+                   y = 35.762,
+                   xend = 12.5,
+                   yend = 50.464),
+               color = "black",
+               arrow = arrow(length = unit(0.0, "npc"))) +
+  theme_grey() +
+  labs(title = "Fertilizer's Effect on Seedling Heights",
+       x = "Initial Heights (cm)",
+       y = "Height after 5 years (cm)") +
+  scale_color_brewer(palette = "Set1") +
+  annotate("text", x = 13.25, y = 45, label = "Height") +
+  annotate("text", x = 13.25, y = 42, label = "14.702 cm")
+```
+
+
+### **Problem 3**
+
+Nutritionists recommend against eating fast food because it is high in sodium, saturated fat, trans fat, and cholesterol. Eating too much over a long period of time can lead to health problems such as high blood pressure, heart disease, and obesity. Many fast-food meals contain more than an entire day's worth of recommended calories! Read the description for the [`fastfood2017`](https://stat-jet-asu.github.io/Datasets/InstructorDescriptions/fastfood2017.html) dataset, then use the data to create the following visualizations.
+
+A) Create a scatterplot to show the relationship between calories (x) and total fat (y) for fast-food burgers. It should include the following features and modifications:
+
+* A smoothed loess model showing the relationship between calories and fat, without the `se` on the model. 
+* One of the themes from `ggplot` or `ggthemes`; non-default point and trend colors that fit with the theme.
+* An informative title and better axis labels than the default variable names, including units of measure.
+* The x-axis scaled from 100 to 1300 in intervals of 100; y-axis scaled from 0 to 100 in intervals of 10.
+
+```{r burgerplot1}
+fastfood2017 %>% filter(type == "Burger") %>%
+ggplot(aes(x = calories, y = totalfat)) +
+  geom_point(color = "#1b9e77") +
+  geom_smooth(method = "loess", se = FALSE, color = "black") +
+  theme_linedraw() +
+  labs(title = "Relationship between Calories and Total Fat for Fast-Food Burgers", 
+       x = "Calories (Cal)", 
+       y = "Total Fat (g)") +
+  scale_x_continuous(limits = c(100, 1300), 
+                     breaks = seq(100, 1300, by = 100)) +
+  scale_y_continuous(limits = c(0, 100), 
+                    breaks = seq(0, 100, by = 10)) +
+  scale_color_brewer(palette = "Dark2")
+```
+
+B) Modify your plot above so that the items belonging to Burger King, McDonald's, or Wendy's (choose 1) are displayed in a different shape or color than the other restaurants and labeled with their item names. (Hint: Create a new variable that shows whether an item belongs to the chosen restaurant or not.)
+
+```{r burgerplot2}
+fastfood2017 <- fastfood2017 %>% mutate(restaurantW = restaurant == "Wendy's")
+
+fastfood2017 %>% filter(type == "Burger") %>%
+ggplot(aes(x = calories, y = totalfat, label = item)) +  
+  geom_point(aes(color = restaurantW)) +
+  geom_smooth(method = "loess", se = FALSE, color = "black") +
+  geom_text_repel(data = subset(fastfood2017 %>% filter(type == "Burger"), 
+                          restaurant == "Wendy's"),
+            aes(color = restaurantW),
+            nudge_y = 0.05,
+            direction = "x",
+            vjust = 0,
+            segment.size = 0.2) +
+  theme_linedraw() +
+  theme(legend.position = "none") +
+  labs(title = "Relationship between Calories and Total Fat for Fast-Food Burgers", 
+       subtitle = "items in a different color belong to Wendy's",
+       x = "Calories (Cal)", 
+       y = "Total Fat (g)") +
+  scale_x_continuous(limits = c(100, 1300), 
+                     breaks = seq(100, 1300, by = 100)) +
+  scale_y_continuous(limits = c(0, 100), 
+                    breaks = seq(0, 100, by = 10)) +
+  scale_color_brewer(palette = "Dark2")
+```
+
+C) Create a standard barplot to show how many burgers there are from each restaurant in the plots above. Include only restaurants with at least one burger. Your plot should include the following features and modifications:
+
+* The same theme as your scatterplots.
+* An informative title and better axis labels.
+* Non-default bar color(s) that fits with the theme.
+* Restaurant names angled on the x-axis (prevent overlap).
+
+```{r burgerbar}
+fastfood2017 %>% filter(type == "Burger") %>%
+  ggplot(aes(x = restaurant, y = frequency(type == "Burger"), fill = restaurant)) + 
+  geom_bar(stat = "identity") +
+  theme_linedraw() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 60, hjust = 1)) +
+  labs(title = "Number of Burgers in Each Restaurant",
+       x = "Restaurant",
+       y = "Amount of Burgers") +
+  scale_fill_brewer(palette = "Paired")
+```
+
+D) In the DataCamp module [Data Visualization with ggplot2 (Part 3)](https://www.datacamp.com/courses/data-visualization-with-ggplot2-part-3) you learned about ternary plots. Here you will create a ternary plot that shows the proportional representation of carbohydrates, protein, and total fat in fast food. Include all fast food items in the dataset. Load the `ggtern` package here rather than at the beginning of the project because it overrides certain functions from `ggplot2`. Your plot should include the following features and modifications:
+
+* An informative title.
+* Better axis (corner) labels.
+* Points colored by `type`.
+* Points larger than the default.
+* Some level of point transparency.
+* Change legend title and point colors using `scale_color_manual()`. 
+* Use `theme_minimal`.
+
+```{r ternaryplot}
+library(ggtern)
+ggtern(fastfood2017, aes(x = carbs, y = protein, z = totalfat, color = type)) +
+  geom_point(alpha = 0.3, size = 4) +
+  theme_minimal(base_size = 10, base_family = "Arial") +
+  labs(title = "Trivariate Relationship in Fast Foods",
+       x = "Carbs",
+       y = "Protein",
+       z = "Total Fat",
+       color = "Type of Food") +
+  scale_color_manual(values = c("blue", "red", "black", "violet", "green", "yellow"))
+```
+
+
+### Session Info
+
+```{r}
+sessionInfo()
+```
